@@ -1,16 +1,18 @@
-# PsychicMustache
-# 2024-11-04 Created
+# Name: dataframe_manager
+# Author: ElPsychicMustache
+# Created: 2024-11-04
 
 # Code is a work in progress based on teachings of Rob Mulla https://youtu.be/xi0vhXFPegw?si=cicV7Pdf9NTjYBRC
 
 import pandas as pd
 
-from validate_input import get_user_confirmation, validate_argument
-from utilities import get_df_from_csv
+from .validate_input import get_user_confirmation, validate_argument
+from .utilities import get_df_from_csv, prompt_selection_for_list
+
 
 class DataframeManager:
 
-    def __init__(self, file_path: str="../data/input/", file_name: str="data.csv", date_columns: list[str]=None, column_names: list[str]=None) -> None:
+    def __init__(self, dataframe: pd.DataFrame=None, file_path: str="../data/input/", file_name: str="data.csv", date_columns: list[str]=None, column_names: list[str]=None) -> None:
         """Class used to hold a Pandas dataframe so that standardized analysis can be performed on it.
 
         Args:
@@ -19,9 +21,12 @@ class DataframeManager:
             date_columns (list[str], optional): Columns that contain date information.. Defaults to None.
             column_names (list[str], optional): The names to provide each column. Defaults to None.
         """
-        self._dataframe: pd.DataFrame = get_df_from_csv(file_path, file_name, date_columns, column_names)
 
-
+        if dataframe:
+            self._dataframe = dataframe
+        else:
+            self._dataframe: pd.DataFrame = get_df_from_csv(file_path, file_name, date_columns, column_names)
+        
     def understand_data(self, head_tail_size: int = 20, analysis_type="short") -> None:
         """Step one of Exploratory data anlysis. Prints some information to help understand the dataframe.
 
@@ -40,7 +45,7 @@ class DataframeManager:
         if analysis_type == "long":
             self._show_null_values()
 
-    
+
     # COLLECTION OF SIMPLE PRINT FUNCTIONS
     def _explain_shape(self):
         """Prints the shape of the dataframe.
@@ -66,16 +71,29 @@ class DataframeManager:
         """Prints how many null values appear in each column.
         """
         print(f"\n======= Null values in each column ======= \n")
-        for column in self._dataframe.columns:
-            len(self._dataframe[column].loc[self._dataframe[column].isna()])
+        print(f"{self._dataframe.isna().sum()}")
     # END OF COLLECTION OF SIMPLE PRINT FUNCTIONS
 
-    def process_data(self) -> None:
+
+    def prepare_data(self, ignore_remove:bool=False, ignore_rename:bool=False) -> None:
         """Step two of Exploratory Data Analysis. Provides some generic function that help with processing data.
         """
-        self.remove_columns_interactively()
-        self.rename_columns_interactively()
+        if not ignore_remove:
+            print("\n[!] Starting remove columns step:")
+            self.remove_columns_interactively()
+        if not ignore_rename:
+            print("\n[!] Starting rename columns step:")
+            self.rename_columns_interactively()
 
+        # TODO: Show user columns and d-types and offer them to change d-types.
+        
+        print("\n[!] Starting null analysis step:")
+        # TODO: Flesh out this step more.
+        self._show_null_values()
+        print("\n[!] Starting duplicate analysis step:")
+        self.analyze_duplicates()
+        
+        # TODO: Offer user a way to reset index after changes (only needed if duplicates are removed)
 
     def remove_columns_interactively(self) -> None:
         """Provides the user a way to interactively delete columns from the dataframe.
@@ -94,8 +112,8 @@ class DataframeManager:
         else:
             print("[-] No columns removed!")
 
-
     def _prompt_for_columns_to_remove(self) -> list[str]:
+        # TODO: Move to utilities
         """Prompts the user each column name and asks if they want to remove them.
 
         Returns:
@@ -112,7 +130,6 @@ class DataframeManager:
 
         return columns_to_remove
     
-
     def rename_columns_interactively(self) -> None:
         """Provides the user a way to interactively rename the columns.
         """
@@ -130,8 +147,8 @@ class DataframeManager:
         else:
             print("[-] No columns renamed!")
 
-
     def _prompt_for_columns_to_rename(self) -> dict[str, str]:
+        # TODO: Move to utilities
         """Prompts the user a way to interactively rename the columns of the dataframe.
 
         Returns:
@@ -147,7 +164,21 @@ class DataframeManager:
                 columns_to_rename[column] = new_column_name
 
         return columns_to_rename
+    
+    def analyze_duplicates(self) -> None:
+        # TODO: Show user duplicate rows. 
+        # This should provide them a way to utilize a subset of columns to identify duplicates.
+        # df.loc[df.duplicated(subset=[])] 
 
+        # Should this include a way to query some values to better understand duplicate values?
+
+        subset_list: list[str] = prompt_selection_for_list(self._dataframe.columns)
+
+        print("\n[!] Here are the duplicate rows:")
+        self._show_duplicates(subset_list)
+    
+    def _show_duplicates(self, subset_list: list[str]):
+        print(f"{self._dataframe.loc[self._dataframe.duplicated(subset=subset_list)]}")
 
     def __str__(self) -> str:
         return f"This is a pandas DataFrame object. Here are the first 25 rows: {self._dataframe.head(25)}"
