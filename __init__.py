@@ -1,1 +1,1 @@
-from datalib.dataframe_manager import DataframeManager
+from .dataframe_manager import DataframeManager
